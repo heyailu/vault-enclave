@@ -31,7 +31,7 @@ containers:
       - RP_ID: "app.ailu.containers.tinfoil.dev"
       - APP_ORIGIN: "https://app.ailu.containers.tinfoil.dev"
       - MAIL_FROM: "Ailu <hello@heyailu.com>"
-      - DB_SCHEMA: "vault"
+      - DB_SCHEMA: "ailu_vault"   # Supabase already has a schema called "vault"
     secrets:
       - VAULT_SIGNING_KEY      # Ed25519 key that signs access tokens
       - OPAQUE_SERVER_SETUP    # OPAQUE server key and OPRF seed; never stored in the database
