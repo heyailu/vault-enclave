@@ -28,8 +28,8 @@ containers:
       - PORT: "8080"
       # The app is served by the vault itself for now, on Tinfoil's address. Passkeys are bound
       # to this hostname, so it moves to heyailu.com before real families sign up.
-      - RP_ID: "vault.<tinfoil-org>.containers.tinfoil.dev"
-      - APP_ORIGIN: "https://vault.<tinfoil-org>.containers.tinfoil.dev"
+      - RP_ID: "vault.nothing-ever-happens.containers.tinfoil.dev"
+      - APP_ORIGIN: "https://vault.nothing-ever-happens.containers.tinfoil.dev"
       - MAIL_FROM: "Ailu <hello@heyailu.com>"
       - DB_SCHEMA: "vault"
     secrets:
