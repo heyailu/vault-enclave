@@ -1,42 +1,48 @@
-# Tinfoil Containers Template
+# Ailu vault enclave
 
-A GitHub template repository for deploying a pre-built Docker image as a [Tinfoil Container](https://docs.tinfoil.sh/containers/overview) (in a secure enclave)
+This repository is the public record of what runs inside **Ailu's vault**: the part of
+[Ailu](https://heyailu.com) that holds each family's encryption key while their assistant is
+working, and the only part that ever sees it.
 
-Out of the box, this template deploys [`tinfoil-containers-hello-world`](https://github.com/tinfoilsh/tinfoil-containers-hello-world): a tiny HTTP server that reads a `MESSAGE` env var and a `GREETING_TOKEN` secret, and responds with both.
+The vault runs in a [Tinfoil Container](https://docs.tinfoil.sh/containers/overview), a sealed
+hardware enclave. The enclave can prove which code it is running, and this repository is what that
+proof is checked against. Nothing else about Ailu needs to be public for that check to work.
 
-## Deploy It
+## What's here
 
-1. Click **[Use this template](https://github.com/tinfoilsh/tinfoil-containers-template/generate)** → **Create a new repository**
-2. In the [Tinfoil Dashboard](https://dash.tinfoil.sh), open the **Secrets** tab and add `GREETING_TOKEN` with any value
-3. Release a version by running the **Tinfoil Release** workflow:
-   - **CLI:** `gh workflow run tinfoil-release.yml -f version=v0.0.1`
-   - **UI:** **Actions** tab → **Tinfoil Release** → **Run workflow**, then enter the version
-4. **Containers** → **Deploy**, select your repo and tag, and click **Deploy**
+| File | What it is |
+|---|---|
+| `tinfoil-config.yml` | Exactly what runs in the enclave: the container image (pinned by digest), its settings, and the only hosts it can talk to |
+| `.github/workflows/tinfoil-release.yml` | Tags a release. Unchanged from Tinfoil's template |
+| `.github/workflows/tinfoil-release-publish.yml` | Measures the configuration, signs the measurement, and publishes the release. Unchanged from Tinfoil's template |
 
-Once running, `curl https://<container-name>.<org>.containers.tinfoil.dev` returns:
+There is no source code and there are no secrets here. Secret values are delivered to the enclave by
+Tinfoil at runtime; the config only names them.
 
+## What a release means
+
+Each GitHub release of this repository is a signed **measurement** of `tinfoil-config.yml`: a
+fingerprint covering the image, every setting and the network allowlist. The signature is recorded
+in the public [Sigstore](https://www.sigstore.dev) transparency log, so releases can't be quietly
+rewritten.
+
+When the Ailu app, or anyone else, connects to the vault, the enclave's hardware proves which
+measurement it is running. If it matches a release here, the vault is running exactly what that
+release describes, and nothing else.
+
+## Checking a running vault yourself
+
+With [Tinfoil's CLI](https://docs.tinfoil.sh/containers/cli):
+
+```sh
+tinfoil http get -e <vault host> -r heyailu/vault-enclave@<version> https://<vault host>/healthz
 ```
-MESSAGE: <value from tinfoil-config.yml>
-GREETING_TOKEN: <present if secret exists>
-```
 
-## Use your own image
+The CLI verifies the enclave's attestation against the named release and pins its TLS identity before
+sending the request. Plain `curl` only checks that the vault is up; it doesn't verify anything.
 
-1. If you have a prebuilt image, edit `tinfoil-config.yml` to point at the image you want to deploy: change `image:` to your `<repo>@sha256:<digest>`, adjust `env`/`secrets`/`shim` for your container, then release a new version.
-2. If you have your own code in a private repo, [`tinfoil-containers-hello-world`](https://github.com/tinfoilsh/tinfoil-containers-hello-world) shows the build-and-publish side and can be added to an existing repository.
-3. If you have your own code in a public repo, use the simple [`tinfoil-public-containers-template`](https://github.com/tinfoilsh/tinfoil-public-containers-template) for an all-in-one-repo example. Since the `tinfoil-config.yml` has to be public, public app code can live in the same repo as the config.
+## Changes
 
-## Updating
-
-Edit `tinfoil-config.yml`, commit, then release a new version (`gh workflow run tinfoil-release.yml -f version=v0.0.2`, or via the **Actions** tab). Then click **Update** in the dashboard. Each release creates an auditable record in the Sigstore transparency log.
-
-## Documentation
-
-For the full configuration reference, secrets management, debug mode, and more:
-
-**[docs.tinfoil.sh/containers](https://docs.tinfoil.sh/containers/overview)**
-
-## Support
-
-- [Documentation](https://docs.tinfoil.sh)
-- [Email Support](mailto:contact@tinfoil.sh)
+Every change to `tinfoil-config.yml` goes through a reviewed pull request before it can be released.
+Releases are listed on this repository's
+[Releases](https://github.com/heyailu/vault-enclave/releases) page.
