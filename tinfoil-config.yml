@@ -6,8 +6,6 @@
 # against it.
 #
 # Secret values are never here. `secrets` only names them; Tinfoil delivers the values at runtime.
-#
-# Placeholders in <angle brackets> are filled in before the first release.
 
 cvm-version: 0.14.7
 cpus: 2
@@ -18,7 +16,7 @@ networks:
   egress:
     egress: allowlist
     allow:
-      - <supabase-pooler-host>          # Postgres, via Supabase's IPv4 session pooler
+      - aws-0-eu-west-2.pooler.supabase.com   # Postgres, via Supabase's IPv4 session pooler
       - api.resend.com                  # verification-code emails
 
 containers:
