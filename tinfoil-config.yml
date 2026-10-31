@@ -24,11 +24,11 @@ containers:
     image: "ghcr.io/heyailu/vault@sha256:45f4a4da7b5438e4167ec2777f29f050e8771a22aeeeaf2049225a6088601029"
     env:
       - PORT: "8080"
-      # The app is served by the vault itself for now, on Tinfoil's address. Passkeys are bound
-      # to this hostname, so it moves to heyailu.com before real families sign up.
-      - RP_ID: "app.ailu.containers.tinfoil.dev"
-      - APP_ORIGIN: "https://app.ailu.containers.tinfoil.dev"
-      - MAIL_FROM: "Ailu <hello@heyailu.com>"
+      # The vault serves the app at app.heyailu.com. Passkeys are bound to the registrable domain,
+      # heyailu.com, so the app can move between subdomains without breaking them.
+      - RP_ID: "heyailu.com"
+      - APP_ORIGIN: "https://app.heyailu.com"
+      - MAIL_FROM: "Ailu <hello@heyailu.com>"   # heyailu.com is the sending domain verified in Resend
       - DB_SCHEMA: "ailu_vault"   # Supabase already has a schema called "vault"
     secrets:
       - VAULT_SIGNING_KEY      # Ed25519 key that signs access tokens
