@@ -28,7 +28,7 @@ containers:
       # heyailu.com, so the app can move between subdomains without breaking them.
       - RP_ID: "heyailu.com"
       - APP_ORIGIN: "https://app.heyailu.com"
-      - MAIL_FROM: "Ailu <hello@mail.heyailu.com>"   # mail.heyailu.com is the domain verified in Resend
+      - MAIL_FROM: "Ailu <hello@heyailu.com>"   # heyailu.com is the sending domain verified in Resend
       - DB_SCHEMA: "ailu_vault"   # Supabase already has a schema called "vault"
     secrets:
       - VAULT_SIGNING_KEY      # Ed25519 key that signs access tokens
