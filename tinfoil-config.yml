@@ -1,16 +1,41 @@
-# Tinfoil Container Configuration
-# For updates: edit this file, commit, run the workflow (e.g., v0.0.2)
+# Ailu vault enclave.
+#
+# This file is the public record of exactly what runs inside Ailu's vault: the container image
+# (pinned by digest), its settings, and the only hosts it can reach. Each GitHub release of this
+# repo is a signed measurement of this file; see README.md for how to check a running vault
+# against it.
+#
+# Secret values are never here. `secrets` only names them; Tinfoil delivers the values at runtime.
+
 cvm-version: 0.14.7
 cpus: 2
 memory: 8192
 
+networks:
+  # Outbound access is closed by default. The vault can reach only these hosts.
+  egress:
+    egress: allowlist
+    allow:
+      - aws-0-eu-west-2.pooler.supabase.com   # Postgres, via Supabase's IPv4 session pooler
+      - api.resend.com                  # verification-code emails
+
 containers:
-  - name: "hello-world"
-    image: "ghcr.io/tinfoilsh/tinfoil-containers-hello-world@sha256:c943b1cab16409e2e686ad71deab30364c27421852cdd6b3080df1c7a38331ed"
+  - name: vault
+    image: "ghcr.io/heyailu/vault@sha256:45f4a4da7b5438e4167ec2777f29f050e8771a22aeeeaf2049225a6088601029"
     env:
-      - MESSAGE: "Hello from Tinfoil"
+      - PORT: "8080"
+      # The app is served by the vault itself for now, on Tinfoil's address. Passkeys are bound
+      # to this hostname, so it moves to heyailu.com before real families sign up.
+      - RP_ID: "app.ailu.containers.tinfoil.dev"
+      - APP_ORIGIN: "https://app.ailu.containers.tinfoil.dev"
+      - MAIL_FROM: "Ailu <hello@heyailu.com>"
+      - DB_SCHEMA: "ailu_vault"   # Supabase already has a schema called "vault"
     secrets:
-      - GREETING_TOKEN
+      - VAULT_SIGNING_KEY      # Ed25519 key that signs access tokens
+      - OPAQUE_SERVER_SETUP    # OPAQUE server key and OPRF seed; never stored in the database
+      - DATABASE_URL
+      - RESEND_API_KEY
+    networks: [egress]
 
 shim:
   upstream-port: 8080
