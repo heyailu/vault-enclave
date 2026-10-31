@@ -1,0 +1,44 @@
+# Releases the vault automatically when a change to tinfoil-config.yml reaches main.
+#
+# Merging the config PR is the human decision: it chooses what runs in the vault and when.
+# This workflow picks the next version (minor bump of the highest vX.Y.Z tag) and starts the
+# usual Tinfoil Release. Publishing then deploys it to the `app` instance
+# (see tinfoil-release-publish.yml).
+
+name: Auto release
+
+on:
+  push:
+    branches: [main]
+    paths: [tinfoil-config.yml]
+
+concurrency:
+  group: auto-release
+  cancel-in-progress: false
+
+permissions: {}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read   # read tags
+      actions: write   # dispatch tinfoil-release.yml
+    steps:
+      - name: Choose the next version and start the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          latest=$(git ls-remote --tags "https://github.com/$GH_REPO" 'v*' \
+            | sed -E 's#.*refs/tags/##; s#\^\{\}$##' \
+            | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | sort -uV | tail -1)
+          if [ -z "$latest" ]; then
+            next=v0.1.0
+          else
+            IFS=. read -r major minor _ <<<"${latest#v}"
+            next="v${major}.$((minor + 1)).0"
+          fi
+          echo "Latest tag: ${latest:-none}; releasing $next"
+          echo "Releasing **$next** (previous: ${latest:-none})" >> "$GITHUB_STEP_SUMMARY"
+          gh workflow run tinfoil-release.yml --ref main -f version="$next"

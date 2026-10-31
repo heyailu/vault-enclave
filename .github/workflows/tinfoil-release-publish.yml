@@ -1,5 +1,10 @@
 # DO NOT RUN MANUALLY. This workflow is dispatched automatically by
 # `tinfoil-release.yml` against the newly created release tag.
+#
+# After publishing, it updates the `app` instance to the new release. Releases are published
+# without being marked "latest". Tinfoil marks the release latest once the new version is serving
+# (blue/green), and the app verifies against the latest release. So publishing never breaks
+# verification for users, and deploying straight away keeps a release from sitting unserved.
 
 name: Tinfoil Release - Publish (auto-triggered)
 
@@ -26,3 +31,58 @@ jobs:
         with:
           config-file: ${{ github.workspace }}/tinfoil-config.yml
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy:
+    needs: measure-and-release
+    runs-on: ubuntu-latest
+    # The Tinfoil admin key is an environment secret, so only this job can read it. Add required
+    # reviewers to the environment in GitHub if deploys should wait for a click.
+    environment: production
+    concurrency:
+      group: tinfoil-deploy-app
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      INSTANCE: app
+      CLI_VERSION: "0.19.12"
+      CLI_SHA256: "19644be8859a323e53840ce3512d1808e164a1b80b137200e2a2a4bde03707f5" # linux_amd64
+    steps:
+      - name: Check for the Tinfoil admin key
+        id: key
+        env:
+          TINFOIL_ADMIN_KEY: ${{ secrets.TINFOIL_ADMIN_KEY }}
+        run: |
+          if [ -z "$TINFOIL_ADMIN_KEY" ]; then
+            echo "::warning::TINFOIL_ADMIN_KEY isn't set in the production environment, so $INSTANCE wasn't updated. Update it to ${GITHUB_REF_NAME} in the Tinfoil dashboard."
+            echo "present=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install the Tinfoil CLI (pinned and verified)
+        if: steps.key.outputs.present == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          asset="tinfoil-cli_${CLI_VERSION}_linux_amd64.tar.gz"
+          curl -fsSL -o "$RUNNER_TEMP/$asset" \
+            "https://github.com/tinfoilsh/tinfoil-cli/releases/download/v${CLI_VERSION}/${asset}"
+          echo "${CLI_SHA256}  $RUNNER_TEMP/$asset" | sha256sum -c -
+          gh attestation verify "$RUNNER_TEMP/$asset" --repo tinfoilsh/tinfoil-cli
+          mkdir -p "$RUNNER_TEMP/bin"
+          tar -xzf "$RUNNER_TEMP/$asset" -C "$RUNNER_TEMP/bin" tinfoil
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+
+      - name: Update the instance
+        if: steps.key.outputs.present == 'true'
+        env:
+          TINFOIL_ADMIN_KEY: ${{ secrets.TINFOIL_ADMIN_KEY }}
+          TINFOIL_NO_UPDATE_CHECK: "1"
+        # No --yes: if an update would ever need downtime (a replace rather than blue/green), the
+        # CLI stops for confirmation and this job fails instead of taking the vault down.
+        # --hold=false so a project-level hold default can't leave the release staged but unserved.
+        run: |
+          tinfoil container update "$INSTANCE" --tag "$GITHUB_REF_NAME" --hold=false </dev/null
+          tinfoil container get "$INSTANCE"
+          echo "Updated **$INSTANCE** to **$GITHUB_REF_NAME**" >> "$GITHUB_STEP_SUMMARY"
