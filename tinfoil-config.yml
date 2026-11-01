@@ -21,7 +21,7 @@ networks:
 
 containers:
   - name: vault
-    image: "ghcr.io/heyailu/vault@sha256:4a6f1492810a347d1b64fa0b37d09b1ea7e6c2ec397646f7350e2f0096b03013"
+    image: "ghcr.io/heyailu/vault@sha256:ba58afaee52cc87f0d843f6488f62708ea14b2e757a3e17d90e56f630d00a49a"
     env:
       - PORT: "8080"
       # The vault serves the app at app.heyailu.com. Passkeys are bound to the registrable domain,
@@ -35,7 +35,6 @@ containers:
       - OPAQUE_SERVER_SETUP    # OPAQUE server key and OPRF seed; never stored in the database
       - DATABASE_URL
       - RESEND_API_KEY
-      - ADMIN_EMAILS           # who can use the admin dashboard; kept out of this public file
     networks: [egress]
 
 shim:
