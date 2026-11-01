@@ -18,10 +18,11 @@ networks:
     allow:
       - aws-0-eu-west-2.pooler.supabase.com   # Postgres, via Supabase's IPv4 session pooler
       - api.resend.com                  # verification-code emails
+      - ea-edubase-api-prod.azurewebsites.net   # England's public register of schools (GIAS), daily
 
 containers:
   - name: vault
-    image: "ghcr.io/heyailu/vault@sha256:ba58afaee52cc87f0d843f6488f62708ea14b2e757a3e17d90e56f630d00a49a"
+    image: "ghcr.io/heyailu/vault@sha256:f7cfe69f9c1651ad2bb2bda355f65266aa787a0707366b6b30d8fa08ab28e24e"
     env:
       - PORT: "8080"
       # The vault serves the app at app.heyailu.com. Passkeys are bound to the registrable domain,
@@ -30,6 +31,8 @@ containers:
       - APP_ORIGIN: "https://app.heyailu.com"
       - MAIL_FROM: "Ailu <hello@heyailu.com>"   # heyailu.com is the sending domain verified in Resend
       - DB_SCHEMA: "ailu_vault"   # Supabase already has a schema called "vault"
+      # Download the public register of schools parents pick from, then refresh it daily.
+      - SCHOOLS_SOURCE: "gias"
     secrets:
       - VAULT_SIGNING_KEY      # Ed25519 key that signs access tokens
       - OPAQUE_SERVER_SETUP    # OPAQUE server key and OPRF seed; never stored in the database
