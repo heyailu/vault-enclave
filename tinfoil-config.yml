@@ -30,9 +30,6 @@ containers:
       - RP_ID: "heyailu.com"
       - APP_ORIGIN: "https://app.heyailu.com"
       - MAIL_FROM: "Ailu <hello@heyailu.com>"   # heyailu.com is the sending domain verified in Resend
-      # The vault's tables, in their own schema. Not "vault": every Supabase project already has a
-      # "vault" schema for Supabase Vault, its built-in store for encrypted secrets, which Ailu
-      # doesn't use. Ailu's secrets are below, delivered by Tinfoil to the attested enclave only.
       - DB_SCHEMA: "ailu_vault"
       # Download the public register of schools parents pick from, then refresh it daily.
       - SCHOOLS_SOURCE: "gias"
