@@ -30,7 +30,7 @@ containers:
       - RP_ID: "heyailu.com"
       - APP_ORIGIN: "https://app.heyailu.com"
       - MAIL_FROM: "Ailu <hello@heyailu.com>"   # heyailu.com is the sending domain verified in Resend
-      - DB_SCHEMA: "ailu_vault"   # Supabase already has a schema called "vault"
+      - DB_SCHEMA: "ailu_vault"
       # Download the public register of schools parents pick from, then refresh it daily.
       - SCHOOLS_SOURCE: "gias"
     secrets:
