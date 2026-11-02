@@ -22,7 +22,7 @@ networks:
 
 containers:
   - name: vault
-    image: "ghcr.io/heyailu/vault@sha256:d156522145aad90f403bdf3424e59813622bf9b1999c6c5453e7e463378e73ad"
+    image: "ghcr.io/heyailu/vault@sha256:cb71d62b205c2e2160c0d6a7b127e9eefbb5abb4d7a2028db97809de33eddea7"
     env:
       - PORT: "8080"
       # The vault serves the app at app.heyailu.com. Passkeys are bound to the registrable domain,
