@@ -7,7 +7,7 @@ production**, so never merge without asking the user at that moment.
 
 ## Security: red-team every change
 
-Code review on pull requests (the Claude review workflow, `/code-review`) must treat this section as required
+Code review on pull requests (the Claude review workflow, `/pr-review`, or `/code-review` run by hand) must treat this section as required
 checks and flag **security issues** at any confidence it can back with a concrete attack, not only certain
 bugs. Review each change adversarially, as an attacker would: in the lines it changes, and in what it does to
 what the enclave's attestation promises families. Each finding names the attacker, the steps, what they gain,
