@@ -5,14 +5,18 @@ This repository is the public record of what runs inside **Ailu's vault**: the p
 working, and the only part that ever sees it.
 
 The vault runs in a [Tinfoil Container](https://docs.tinfoil.sh/containers/overview), a sealed
-hardware enclave. The enclave can prove which code it is running, and this repository is what that
+hardware enclave. For now Ailu's **core** runs in the same enclave as a second container: the part
+that works on a family's data (chat, tasks, email), which holds no keys and asks the vault to open
+what it needs. Each has its own image, secrets and network allowlist, and a release here measures
+both. (The core has its own repository, [`heyailu/core-enclave`](https://github.com/heyailu/core-enclave),
+for when it moves to an enclave of its own.) The enclave can prove which code it is running, and this repository is what that
 proof is checked against. Nothing else about Ailu needs to be public for that check to work.
 
 ## What's here
 
 | File | What it is |
 |---|---|
-| `tinfoil-config.yml` | Exactly what runs in the enclave: the container image (pinned by digest), its settings, and the only hosts it can talk to |
+| `tinfoil-config.yml` | Exactly what runs in the enclave: each container image (pinned by digest), its settings, and the only hosts each can talk to |
 | `.github/workflows/auto-release.yml` | When a change to `tinfoil-config.yml` merges, picks the next version and starts a release |
 | `.github/workflows/tinfoil-release.yml` | Tags a release. Unchanged from Tinfoil's template |
 | `.github/workflows/tinfoil-release-publish.yml` | Measures the configuration, signs the measurement, and publishes the release (Tinfoil's template), then updates the running vault to it |

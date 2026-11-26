@@ -1,32 +1,50 @@
-# Ailu vault enclave.
+# Ailu's enclave: the gateway and the core, as two containers in one Tinfoil instance.
 #
-# This file is the public record of exactly what runs inside Ailu's vault: the container image
-# (pinned by digest), its settings, and the only hosts it can reach. Each GitHub release of this
-# repo is a signed measurement of this file; see README.md for how to check a running vault
-# against it.
+# This file is the public record of exactly what runs inside it: each container image (pinned by
+# digest), their settings, and the only hosts each can reach. Each GitHub release of this repo is a
+# signed measurement of this file, covering both containers; see README.md for how to check a
+# running enclave against it.
 #
-# Secret values are never here. `secrets` only names them; Tinfoil delivers the values at runtime.
+# The gateway signs parents in and holds each family's key, in memory only. The core does the work
+# on family data (chat, tasks, email) and holds no keys: the gateway seals and opens its records.
+# They share an instance to keep hosting to one while Ailu is small; heyailu/ailu's
+# docs/family-agent-design.md ("One instance") says what that gives up.
+#
+# Secret values are never here. `secrets` only names them; Tinfoil delivers each container only
+# the secrets it lists.
 
 cvm-version: 0.14.7
 cpus: 2
 memory: 8192
 
 networks:
-  # Outbound access is closed by default. The vault can reach only these hosts.
-  egress:
+  # Outbound access is closed by default. Each container has its own allowlist.
+  gateway-out:
     egress: allowlist
     allow:
       - aws-0-eu-west-2.pooler.supabase.com   # Postgres, via Supabase's IPv4 session pooler
       - api.resend.com                  # verification-code emails
       - ea-edubase-api-prod.azurewebsites.net   # England's public register of schools (GIAS), daily
       - schoolapps.org.uk               # Greenhouse Schools notification feeds (public, read-only)
+  core-out:
+    egress: allowlist
+    allow:
+      - aws-0-eu-west-2.pooler.supabase.com   # Postgres, as the core's own role and schema
+      - atc.tinfoil.sh                  # attestation bundles for Tinfoil's inference, and its router list
+      - router-0.tinfoil.sh             # Tinfoil inference routers (the core verifies the one it uses)
+      - inference.tinfoil.sh
+      - api.tinfoil.sh                  # Tinfoil's public model price list, read daily
+  # Closed: the gateway and the core reach each other here, and nothing else can.
+  internal: {}
 
 containers:
-  - name: vault
-    image: "ghcr.io/heyailu/vault@sha256:b59936d01ad0894513f1f4bdcbcc3919e99a8d91a7af8824cbaadf478e8a8833"
+  # First, and the only container the outside world reaches (the shim's target).
+  - name: gateway
+    image: "ghcr.io/heyailu/vault@sha256:130a552e2530e092e3cd91436e6879ce1399ed1f4ea806097f23d172f873bbba"
+    memory: 2g
     env:
       - PORT: "8080"
-      # The vault serves the app at app.heyailu.com. Passkeys are bound to the registrable domain,
+      # The gateway serves the app at app.heyailu.com. Passkeys are bound to the registrable domain,
       # heyailu.com, so the app can move between subdomains without breaking them.
       - RP_ID: "heyailu.com"
       - APP_ORIGIN: "https://app.heyailu.com"
@@ -34,14 +52,32 @@ containers:
       - DB_SCHEMA: "ailu_vault"
       # Download the public register of schools parents pick from, then refresh it daily.
       - SCHOOLS_SOURCE: "gias"
+      # The core, beside it. The gateway forwards the app's /core requests there, and serves the
+      # core's own calls (sealing and opening its records) on a separate port, only to callers
+      # from the core's address.
+      - CORE_URL: "http://core:8080"
     secrets:
       - VAULT_SIGNING_KEY      # Ed25519 key that signs access tokens
       - OPAQUE_SERVER_SETUP    # OPAQUE server key and OPRF seed; never stored in the database
       - DATABASE_URL
       - RESEND_API_KEY
-    networks: [egress]
+    networks: [gateway-out, internal]
+
+  # Chat, tasks and email processing. Reachable only through the gateway.
+  - name: core
+    image: "ghcr.io/heyailu/core@sha256:91b42ec9a90c90e55cc3bb5910432dd6b49afc5ef8ccd60fa47e00a05fbb07ab"
+    memory: 5g
+    env:
+      - PORT: "8080"
+      - GATEWAY_URL: "http://gateway:8789"
+      - DB_SCHEMA: "ailu_core"
+    secrets:
+      - CORE_DATABASE_URL      # the core's own database role, which can't read the gateway's tables
+      - TINFOIL_API_KEY        # Tinfoil inference, billed per token; opens no family data
+    networks: [core-out, internal]
 
 shim:
+  upstream-container: gateway
   upstream-port: 8080
   paths:
     - /*
