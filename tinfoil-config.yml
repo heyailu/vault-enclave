@@ -40,7 +40,7 @@ networks:
 containers:
   # First, and the only container the outside world reaches (the shim's target).
   - name: gateway
-    image: "ghcr.io/heyailu/vault@sha256:GATEWAY_DIGEST"
+    image: "ghcr.io/heyailu/vault@sha256:130a552e2530e092e3cd91436e6879ce1399ed1f4ea806097f23d172f873bbba"
     memory: 2g
     env:
       - PORT: "8080"
@@ -65,7 +65,7 @@ containers:
 
   # Chat, tasks and email processing. Reachable only through the gateway.
   - name: core
-    image: "ghcr.io/heyailu/core@sha256:CORE_DIGEST"
+    image: "ghcr.io/heyailu/core@sha256:91b42ec9a90c90e55cc3bb5910432dd6b49afc5ef8ccd60fa47e00a05fbb07ab"
     memory: 5g
     env:
       - PORT: "8080"
